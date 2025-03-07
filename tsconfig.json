@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./tsconfig.base.json",
+  "ts-node": {
+    "transpileOnly": true,
+    "swc": true
+  },
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["**/*.ts", "tsconfig.json"],
+  "exclude": ["jest.config.ts", "dist", "__tests__"],
+  "references": []
+}
