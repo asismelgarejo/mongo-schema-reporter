@@ -30,6 +30,15 @@ type TObjectId = SchemaOptions & {
 type TInt = SchemaOptions & {
   bsonType: BSONType.Int;
 };
+type TBool = SchemaOptions & {
+  bsonType: BSONType.Bool;
+};
+type TDecimal = SchemaOptions & {
+  bsonType: BSONType.Decimal;
+};
+type TDate = SchemaOptions & {
+  bsonType: BSONType.Date;
+};
 export type TObject = SchemaOptions & {
   additionalProperties?: TAdditionalProperties;
   bsonType: BSONType.Object;
@@ -44,11 +53,11 @@ export type TOr = SchemaOptions & {
 export type TArray = SchemaOptions & {
   additionalProperties?: TAdditionalProperties;
   bsonType: BSONType.Array;
-  items: TSchemaTypes;
+  items: TObject;
   required?: string[];
 };
 //#endregion
 
-export type TSchemaTypes = TString | TObject | TArray | TInt | TObjectId;
+export type TSchemaTypes = TString | TObject | TArray | TInt | TObjectId | TBool | TDecimal | TDate | TOr;
 export type TSchema = Record<TPropertyKey, TSchemaTypes>;
 export type TAdditionalProperties = undefined | TSchema | boolean;

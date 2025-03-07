@@ -12,7 +12,7 @@
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": [
+  "file": [
     "dist"
   ],
   "keywords": [],
@@ -20,7 +20,7 @@
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "http://github.com/$TODO-github-username/$TODO-module-name.git"
+    "url": "https://github.com/asismelgarejo/mongo-schema-reporter"
   },
   "description": "",
   "devDependencies": {

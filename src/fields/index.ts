@@ -24,31 +24,62 @@ export class SchemaFields {
     if (isArray) return prefix ? `${prefix}.[0].${key}` : key;
     return prefix ? `${prefix}.${key}` : key;
   };
+  private numberToLetters = (n: number): string => {
+    let result = "";
+    while (n >= 0) {
+      result = String.fromCharCode((n % 26) + 65) + result;
+      n = Math.floor(n / 26) - 1;
+    }
+    return result;
+  };
 
-  getReport = ({ schema: sch, prefix = "", isArray = false }: ReportProps): FieldsReport[] => {
+  getReport = ($schema: TObject | TOr): FieldsReport[] => {
+    const report: FieldsReport[] = this.processSchema({ schema: $schema });
+    return report;
+  };
+  private processSchema = ({ schema, prefix = "", isArray = false }: ReportProps): FieldsReport[] => {
     const report: FieldsReport[] = [];
-
-    if ((sch as unknown as TOr).oneOf) {
-      const sche = sch as unknown as TOr;
-      sche.oneOf.forEach((schema) => {
-        const r = this.getReportItem({ schema, prefix, isArray });
-        report.push(r);
-      });
+    if ("oneOf" in schema) {
+      report.push(...this.processOneOf(schema, prefix, isArray));
     } else {
-      const r = this.getReportItem({ schema: sch, prefix, isArray });
+      const r = this.processObject(schema, prefix, isArray);
       report.push(r);
     }
 
     return report;
   };
-  private getReportItem = ({ schema: sch, prefix = "", isArray = false }: ReportProps): FieldsReport => {
+  private processOneOf = ($schema: TOr, prefix = "", isArray = false): FieldsReport[] => {
+    const report: FieldsReport[] = [];
+    $schema.oneOf.forEach((schema) => {
+      const r = this.processObject(schema, prefix, isArray);
+      report.push(r);
+    });
+    return report;
+  };
+  private processObject = (schema: TObject, prefix = "", isArray = false): FieldsReport => {
     const report: Record<string, FieldReport> = {};
 
-    const schema = sch as unknown as TObject;
     for (const [key, value] of Object.entries(schema.properties)) {
       const isRequired = schema?.required ? schema?.required.includes(key) : false;
       const path = this.getPath(isArray, prefix, key);
-      if (value.bsonType === BSONType.Object && value.properties) {
+
+      if ("oneOf" in value) {
+        report[path] = {
+          path,
+          data_type: BSONType.Object,
+          description: value.description,
+          required: isRequired,
+          title: value.title,
+        };
+
+        //TODO: Refactor
+        value.oneOf.forEach((schema, idx) => {
+          const discriminator = schema.title ?? this.numberToLetters(idx)
+          const pathField = `${path}.[${discriminator}]`;
+          const r = this.processObject(schema, pathField, false);
+          Object.assign(report, r);
+        });
+      } else if (value.bsonType === BSONType.Object && value.properties) {
         report[path] = {
           path,
           data_type: BSONType.Object,
@@ -57,14 +88,7 @@ export class SchemaFields {
           title: value.title,
         };
 
-        Object.assign(
-          report,
-          this.getReport({
-            isArray: false,
-            schema: value,
-            prefix: path,
-          }),
-        );
+        Object.assign(report, this.processObject(value, prefix, isArray));
       } else if (value.bsonType === BSONType.Array && value.items) {
         report[path] = {
           path,
@@ -75,14 +99,7 @@ export class SchemaFields {
         };
 
         if (value.items.bsonType === BSONType.Object) {
-          Object.assign(
-            report,
-            this.getReport({
-              isArray: true,
-              schema: value.items,
-              prefix: path,
-            }),
-          );
+          Object.assign(report, this.processObject(value.items, path, true));
         }
       } else {
         if (value.bsonType === BSONType.String && value?.enum) {
