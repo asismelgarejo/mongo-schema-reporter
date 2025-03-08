@@ -19,7 +19,7 @@ type ReportProps = {
 
 export type FieldsReport = Record<string, FieldReport>;
 
-export class SchemaFields {
+class Engine {
   private getPath = (isArray: boolean, prefix: string, key: string) => {
     if (isArray) return prefix ? `${prefix}.[0].${key}` : key;
     return prefix ? `${prefix}.${key}` : key;
@@ -74,7 +74,7 @@ export class SchemaFields {
 
         //TODO: Refactor
         value.oneOf.forEach((schema, idx) => {
-          const discriminator = schema.title ?? this.numberToLetters(idx)
+          const discriminator = schema.title ?? this.numberToLetters(idx);
           const pathField = `${path}.[${discriminator}]`;
           const r = this.processObject(schema, pathField, false);
           Object.assign(report, r);
@@ -124,4 +124,31 @@ export class SchemaFields {
 
     return report;
   };
+}
+
+export class SchemaFields {
+  reports: FieldsReport[] = [];
+  private constructor(private readonly engine: Engine) {}
+
+  static create() {
+    return new SchemaFields(new Engine());
+  }
+
+  process = ($schema: TObject | TOr): SchemaFields => {
+    this.reports = this.engine.getReport($schema);
+    return this;
+  };
+
+  toArrays(): FieldReport[][] {
+    const arrays = this.reports.map((r) => {
+      return Object.values(r);
+    });
+    this.reports = [];
+    return arrays;
+  }
+  raw() {
+    const raw = [...this.reports];
+    this.reports = [];
+    return raw;
+  }
 }

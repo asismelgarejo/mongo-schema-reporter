@@ -309,10 +309,10 @@ describe("Schema Fields", () => {
     },
   ];
 
-  const schemaFields = new SchemaFields();
+  const schemaFields = SchemaFields.create();
   tests.forEach((t) => {
     test(t.name, () => {
-      const got = schemaFields.getReport(t.input);
+      const got = schemaFields.process(t.input).raw();
       expect(got).toEqual(t.expected);
     });
   });
