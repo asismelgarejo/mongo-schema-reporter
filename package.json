@@ -1,6 +1,6 @@
 {
   "name": "mongo-schema-reporter",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "scripts": {
     "build": "tsc -b",
     "prepublishOnly": "npm run build",
