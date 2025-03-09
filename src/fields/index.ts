@@ -97,7 +97,7 @@ class Engine {
         fieldsHashMap[path] = {
           path,
           data_type: `array<${value.items.bsonType}>`,
-          description: value.items?.description,
+          description: value.description,
           required: isRequired,
           title: value.title,
         };
