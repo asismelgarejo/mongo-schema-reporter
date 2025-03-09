@@ -9,9 +9,6 @@ export interface SchemaOptions {
   /** Description of this schema */
   description?: string;
   /** Default value for this schema */
-  default?: any;
-  /** Example values matching this schema */
-  examples?: any;
   /** Optional annotation for readOnly */
   readOnly?: boolean;
   /** Optional annotation for writeOnly */

@@ -10,6 +10,6 @@
     "rootDir": "src"
   },
   "include": ["**/*.ts", "tsconfig.json"],
-  "exclude": ["jest.config.ts", "dist", "__tests__"],
+  "exclude": ["jest.config.ts", "dist", "__tests__", "sb"],
   "references": []
 }

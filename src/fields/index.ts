@@ -1,22 +1,28 @@
-import { BSONType, TObject, TOr } from "../shared";
+import { BSONType, STATIC_WORDS, TObject, TOr } from "../shared";
 
+//#region types
 export type FieldReport = {
   path: string;
   data_type: string;
   required: boolean;
-
   title?: string;
   description?: string;
-  default?: any;
-  examples?: any;
 };
 
-type ReportProps = {
+export type FieldsHashMap = Record<string, FieldReport>;
+export type FieldsReportHashMap = {
+  title: string;
+  fieldsHashMap: FieldsHashMap;
+};
+export type FieldsReportArray = {
+  title: string;
+  fields: FieldReport[];
+};
+type ProcessSchemaProps = {
   schema: TObject | TOr;
   prefix?: string;
 };
-
-export type FieldsReport = Record<string, FieldReport>;
+//#endregion
 
 class Engine {
   private getPath = (prefix: string, key: string) => {
@@ -31,12 +37,12 @@ class Engine {
     return result;
   };
 
-  getReport = ($schema: TObject | TOr): FieldsReport[] => {
-    const report: FieldsReport[] = this.processSchema({ schema: $schema });
+  getReport = ($schema: TObject | TOr): FieldsReportHashMap[] => {
+    const report: FieldsReportHashMap[] = this.processSchema({ schema: $schema });
     return report;
   };
-  private processSchema = ({ schema, prefix = "" }: ReportProps): FieldsReport[] => {
-    const report: FieldsReport[] = [];
+  private processSchema = ({ schema, prefix = "" }: ProcessSchemaProps): FieldsReportHashMap[] => {
+    const report: FieldsReportHashMap[] = [];
     if ("oneOf" in schema) {
       report.push(...this.processOneOf(schema, prefix));
     } else {
@@ -46,23 +52,23 @@ class Engine {
 
     return report;
   };
-  private processOneOf = ($schema: TOr, prefix = ""): FieldsReport[] => {
-    const report: FieldsReport[] = [];
+  private processOneOf = ($schema: TOr, prefix = ""): FieldsReportHashMap[] => {
+    const report: FieldsReportHashMap[] = [];
     $schema.oneOf.forEach((schema) => {
       const r = this.processObject(schema, prefix);
       report.push(r);
     });
     return report;
   };
-  private processObject = (schema: TObject, prefix = ""): FieldsReport => {
-    const report: Record<string, FieldReport> = {};
+  private processObject = (schema: TObject, prefix = ""): FieldsReportHashMap => {
+    const fieldsHashMap: FieldsHashMap = {};
 
     for (const [key, value] of Object.entries(schema.properties)) {
       const isRequired = schema?.required ? schema?.required.includes(key) : false;
       const path = this.getPath(prefix, key);
 
       if ("oneOf" in value) {
-        report[path] = {
+        fieldsHashMap[path] = {
           path,
           data_type: BSONType.Object,
           description: value.description,
@@ -75,10 +81,10 @@ class Engine {
           const discriminator = schema.title ?? this.numberToLetters(idx);
           const pathField = `${path}.[${discriminator}]`;
           const r = this.processObject(schema, pathField);
-          Object.assign(report, r);
+          Object.assign(fieldsHashMap, r.fieldsHashMap);
         });
       } else if (value.bsonType === BSONType.Object && value.properties) {
-        report[path] = {
+        fieldsHashMap[path] = {
           path,
           data_type: BSONType.Object,
           description: value?.description,
@@ -86,9 +92,9 @@ class Engine {
           title: value.title,
         };
 
-        Object.assign(report, this.processObject(value, prefix));
+        Object.assign(fieldsHashMap, this.processObject(value, prefix));
       } else if (value.bsonType === BSONType.Array && value.items) {
-        report[path] = {
+        fieldsHashMap[path] = {
           path,
           data_type: `array<${value.items.bsonType}>`,
           description: value.items?.description,
@@ -97,12 +103,12 @@ class Engine {
         };
 
         if (value.items.bsonType === BSONType.Object) {
-          const newPath = `${path}.[0]`
-          Object.assign(report, this.processObject(value.items, newPath));
+          const newPath = `${path}.[0]`;
+          Object.assign(fieldsHashMap, this.processObject(value.items, newPath).fieldsHashMap);
         }
       } else {
         if (value.bsonType === BSONType.String && value?.enum) {
-          report[path] = {
+          fieldsHashMap[path] = {
             path,
             data_type: `enum(${value.enum.map((e: string) => `'${e}'`).join(", ")})`,
             description: value.description,
@@ -110,7 +116,7 @@ class Engine {
             title: value.title,
           };
         } else {
-          report[path] = {
+          fieldsHashMap[path] = {
             path,
             data_type: `${value.bsonType}`,
             description: value.description,
@@ -120,13 +126,16 @@ class Engine {
         }
       }
     }
-
-    return report;
+    const asdas: FieldsReportHashMap = {
+      title: schema.title ?? STATIC_WORDS.UnnamedSchema,
+      fieldsHashMap,
+    };
+    return asdas;
   };
 }
 
 export class SchemaFields {
-  reports: FieldsReport[] = [];
+  reports: FieldsReportHashMap[] = [];
   private constructor(private readonly engine: Engine) {}
 
   static create() {
@@ -138,9 +147,14 @@ export class SchemaFields {
     return this;
   };
 
-  toArrays(): FieldReport[][] {
+  toArrays(): FieldsReportArray[] {
     const arrays = this.reports.map((r) => {
-      return Object.values(r);
+      const obj: FieldsReportArray = {
+        title: r.title,
+        fields: Object.values(r.fieldsHashMap),
+      };
+
+      return obj;
     });
     this.reports = [];
     return arrays;

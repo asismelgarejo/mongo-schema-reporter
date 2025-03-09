@@ -1,11 +1,11 @@
-import { FieldsReport, SchemaFields } from "../src/fields";
-import { BSONType, TObject, TOr } from "../src/shared";
+import { FieldsReportHashMap, SchemaFields } from "../src/fields";
+import { BSONType, STATIC_WORDS, TObject, TOr } from "../src/shared";
 
 describe("Schema Fields", () => {
   type Test = {
     name: string;
     input: TObject | TOr;
-    expected: FieldsReport[];
+    expected: FieldsReportHashMap[];
   };
 
   const tests: Test[] = [
@@ -21,17 +21,20 @@ describe("Schema Fields", () => {
       },
       expected: [
         {
-          name: {
-            data_type: "string",
-            path: "name",
-            required: true,
-            description: undefined,
-          },
-          age: {
-            data_type: "int",
-            path: "age",
-            required: false,
-            description: undefined,
+          title: STATIC_WORDS.UnnamedSchema,
+          fieldsHashMap: {
+            name: {
+              data_type: "string",
+              path: "name",
+              required: true,
+              description: undefined,
+            },
+            age: {
+              data_type: "int",
+              path: "age",
+              required: false,
+              description: undefined,
+            },
           },
         },
       ],
@@ -73,31 +76,37 @@ describe("Schema Fields", () => {
       },
       expected: [
         {
-          _id: {
-            data_type: "objectId",
-            path: "_id",
-            required: true,
-            description: undefined,
-          },
-          type: {
-            data_type: "enum('variable')",
-            path: "type",
-            required: false,
-            description: undefined,
+          title: "fund-variable",
+          fieldsHashMap: {
+            _id: {
+              data_type: "objectId",
+              path: "_id",
+              required: true,
+              description: undefined,
+            },
+            type: {
+              data_type: "enum('variable')",
+              path: "type",
+              required: false,
+              description: undefined,
+            },
           },
         },
         {
-          _id: {
-            data_type: "objectId",
-            path: "_id",
-            required: true,
-            description: undefined,
-          },
-          type: {
-            data_type: "enum('fixed')",
-            path: "type",
-            required: false,
-            description: undefined,
+          title: "fund-fixed",
+          fieldsHashMap: {
+            _id: {
+              data_type: "objectId",
+              path: "_id",
+              required: true,
+              description: undefined,
+            },
+            type: {
+              data_type: "enum('fixed')",
+              path: "type",
+              required: false,
+              description: undefined,
+            },
           },
         },
       ],

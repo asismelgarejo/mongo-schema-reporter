@@ -14,7 +14,7 @@ const eslintConfig = [
     },
   },
   {
-    ignores: ["**/dist/**"],
+    ignores: ["**/dist/**", "sb"],
   },
   {
     rules: {
