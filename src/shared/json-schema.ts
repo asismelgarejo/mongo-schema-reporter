@@ -42,10 +42,15 @@ export type TObject = SchemaOptions & {
   properties: TSchema;
   required?: string[];
 };
-export type TOr = SchemaOptions & {
+export type TOneOf = SchemaOptions & {
   additionalProperties?: TAdditionalProperties;
   bsonType: BSONType.Object;
   oneOf: TObject[];
+};
+export type TAnyOf = SchemaOptions & {
+  additionalProperties?: TAdditionalProperties;
+  bsonType: BSONType.Object;
+  anyOf: TObject[];
 };
 export type TArray = SchemaOptions & {
   additionalProperties?: TAdditionalProperties;
@@ -55,6 +60,6 @@ export type TArray = SchemaOptions & {
 };
 //#endregion
 
-export type TSchemaTypes = TString | TObject | TArray | TInt | TObjectId | TBool | TDecimal | TDate | TOr;
+export type TSchemaTypes = TString | TObject | TArray | TInt | TObjectId | TBool | TDecimal | TDate | TOneOf | TAnyOf;
 export type TSchema = Record<TPropertyKey, TSchemaTypes>;
 export type TAdditionalProperties = undefined | TSchema | boolean;

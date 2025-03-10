@@ -1,4 +1,4 @@
-import { BSONType, STATIC_WORDS, TObject, TOr } from "../shared";
+import { BSONType, STATIC_WORDS, TAnyOf, TObject, TOneOf } from "../shared";
 
 //#region types
 export type FieldReport = {
@@ -19,7 +19,7 @@ export type FieldsReportArray = {
   fields: FieldReport[];
 };
 type ProcessSchemaProps = {
-  schema: TObject | TOr;
+  schema: TObject | TOneOf | TAnyOf;
   prefix?: string;
 };
 //#endregion
@@ -37,7 +37,7 @@ class Engine {
     return result;
   };
 
-  getReport = ($schema: TObject | TOr): FieldsReportHashMap[] => {
+  getReport = ($schema: TObject | TOneOf): FieldsReportHashMap[] => {
     const report: FieldsReportHashMap[] = this.processSchema({ schema: $schema });
     return report;
   };
@@ -45,6 +45,8 @@ class Engine {
     const report: FieldsReportHashMap[] = [];
     if ("oneOf" in schema) {
       report.push(...this.processOneOf(schema, prefix));
+    } else if ("anyOf" in schema) {
+      report.push(...this.processAnyOf(schema, prefix));
     } else {
       const r = this.processObject(schema, prefix);
       report.push(r);
@@ -52,9 +54,17 @@ class Engine {
 
     return report;
   };
-  private processOneOf = ($schema: TOr, prefix = ""): FieldsReportHashMap[] => {
+  private processOneOf = ($schema: TOneOf, prefix = ""): FieldsReportHashMap[] => {
     const report: FieldsReportHashMap[] = [];
     $schema.oneOf.forEach((schema) => {
+      const r = this.processObject(schema, prefix);
+      report.push(r);
+    });
+    return report;
+  };
+  private processAnyOf = ($schema: TAnyOf, prefix = ""): FieldsReportHashMap[] => {
+    const report: FieldsReportHashMap[] = [];
+    $schema.anyOf.forEach((schema) => {
       const r = this.processObject(schema, prefix);
       report.push(r);
     });
@@ -78,6 +88,22 @@ class Engine {
 
         //TODO: Refactor
         value.oneOf.forEach((schema, idx) => {
+          const discriminator = schema.title ?? this.numberToLetters(idx);
+          const pathField = `${path}.[${discriminator}]`;
+          const r = this.processObject(schema, pathField);
+          Object.assign(fieldsHashMap, r.fieldsHashMap);
+        });
+      } else if ("anyOf" in value) {
+        fieldsHashMap[path] = {
+          path,
+          data_type: BSONType.Object,
+          description: value.description,
+          required: isRequired,
+          title: value.title,
+        };
+
+        //TODO: Refactor
+        value.anyOf.forEach((schema, idx) => {
           const discriminator = schema.title ?? this.numberToLetters(idx);
           const pathField = `${path}.[${discriminator}]`;
           const r = this.processObject(schema, pathField);
@@ -142,7 +168,7 @@ export class SchemaFields {
     return new SchemaFields(new Engine());
   }
 
-  process = ($schema: TObject | TOr): SchemaFields => {
+  process = ($schema: TObject | TOneOf): SchemaFields => {
     this.reports = this.engine.getReport($schema);
     return this;
   };
