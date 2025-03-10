@@ -22,6 +22,17 @@ type ProcessSchemaProps = {
   schema: TObject | TOneOf | TAnyOf;
   prefix?: string;
 };
+type ProccessIsophormicObjectsProps = {
+  schemas: TObject[];
+  path: string;
+  isRequired: boolean;
+  description?: string;
+  title?: string;
+};
+type ProccessIsophormicArrayProps = {
+  schemas: TObject[];
+  path: string;
+};
 //#endregion
 
 class Engine {
@@ -70,6 +81,36 @@ class Engine {
     });
     return report;
   };
+
+  private proccessIsophormicObjects = (props: ProccessIsophormicObjectsProps) => {
+    const fieldsHashMap: FieldsHashMap = {};
+    fieldsHashMap[props.path] = {
+      path: props.path,
+      data_type: BSONType.Object,
+      description: props.description,
+      required: props.isRequired,
+      title: props.title,
+    };
+
+    props.schemas.forEach((schema, idx) => {
+      const discriminator = schema.title ?? this.numberToLetters(idx);
+      const pathField = `${props.path}<object=${discriminator}>`;
+      const r = this.processObject(schema, pathField);
+      Object.assign(fieldsHashMap, r.fieldsHashMap);
+    });
+    return fieldsHashMap;
+  };
+  private proccessIsophormicArrayProps = (props: ProccessIsophormicArrayProps) => {
+    const fieldsHashMap: FieldsHashMap = {};
+    props.schemas.forEach((schema, idx) => {
+      const discriminator = schema.title ?? this.numberToLetters(idx);
+      const pathField = `${props.path}<array.object=${discriminator}>`;
+      const r = this.processObject(schema, pathField);
+      Object.assign(fieldsHashMap, r.fieldsHashMap);
+    });
+    return fieldsHashMap;
+  };
+
   private processObject = (schema: TObject, prefix = ""): FieldsReportHashMap => {
     const fieldsHashMap: FieldsHashMap = {};
 
@@ -78,37 +119,23 @@ class Engine {
       const path = this.getPath(prefix, key);
 
       if ("oneOf" in value) {
-        fieldsHashMap[path] = {
-          path,
-          data_type: BSONType.Object,
+        const hashMap = this.proccessIsophormicObjects({
           description: value.description,
-          required: isRequired,
+          isRequired,
+          path,
+          schemas: value.oneOf,
           title: value.title,
-        };
-
-        //TODO: Refactor
-        value.oneOf.forEach((schema, idx) => {
-          const discriminator = schema.title ?? this.numberToLetters(idx);
-          const pathField = `${path}.[${discriminator}]`;
-          const r = this.processObject(schema, pathField);
-          Object.assign(fieldsHashMap, r.fieldsHashMap);
         });
+        Object.assign(fieldsHashMap, hashMap);
       } else if ("anyOf" in value) {
-        fieldsHashMap[path] = {
-          path,
-          data_type: BSONType.Object,
+        const hashMap = this.proccessIsophormicObjects({
           description: value.description,
-          required: isRequired,
+          isRequired,
+          path,
+          schemas: value.anyOf,
           title: value.title,
-        };
-
-        //TODO: Refactor
-        value.anyOf.forEach((schema, idx) => {
-          const discriminator = schema.title ?? this.numberToLetters(idx);
-          const pathField = `${path}.[${discriminator}]`;
-          const r = this.processObject(schema, pathField);
-          Object.assign(fieldsHashMap, r.fieldsHashMap);
         });
+        Object.assign(fieldsHashMap, hashMap);
       } else if (value.bsonType === BSONType.Object && value.properties) {
         fieldsHashMap[path] = {
           path,
@@ -122,14 +149,26 @@ class Engine {
       } else if (value.bsonType === BSONType.Array && value.items) {
         fieldsHashMap[path] = {
           path,
-          data_type: `array<${value.items.bsonType}>`,
+          data_type: `${value.bsonType}<${value.items.bsonType}>`,
           description: value.description,
           required: isRequired,
           title: value.title,
         };
 
-        if (value.items.bsonType === BSONType.Object) {
-          const newPath = `${path}.[0]`;
+        if ("oneOf" in value.items) {
+          const hashMap = this.proccessIsophormicArrayProps({
+            path,
+            schemas: value.items.oneOf,
+          });
+          Object.assign(fieldsHashMap, hashMap);
+        } else if ("anyOf" in value.items) {
+          const hashMap = this.proccessIsophormicArrayProps({
+            path,
+            schemas: value.items.anyOf,
+          });
+          Object.assign(fieldsHashMap, hashMap);
+        } else if (value.items.bsonType === BSONType.Object && value.items) {
+          const newPath = `${path}<object>`;
           Object.assign(fieldsHashMap, this.processObject(value.items, newPath).fieldsHashMap);
         }
       } else {

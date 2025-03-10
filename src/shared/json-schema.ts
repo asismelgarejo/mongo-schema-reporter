@@ -55,7 +55,7 @@ export type TAnyOf = SchemaOptions & {
 export type TArray = SchemaOptions & {
   additionalProperties?: TAdditionalProperties;
   bsonType: BSONType.Array;
-  items: TObject;
+  items: TObject | TOneOf | TAnyOf;
   required?: string[];
 };
 //#endregion
