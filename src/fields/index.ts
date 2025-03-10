@@ -104,7 +104,7 @@ class Engine {
     const fieldsHashMap: FieldsHashMap = {};
     props.schemas.forEach((schema, idx) => {
       const discriminator = schema.title ?? this.numberToLetters(idx);
-      const pathField = `${props.path}[]${discriminator}`;
+      const pathField = `${props.path}[${discriminator}]`;
       const r = this.processObject(schema, pathField);
       Object.assign(fieldsHashMap, r.fieldsHashMap);
     });
