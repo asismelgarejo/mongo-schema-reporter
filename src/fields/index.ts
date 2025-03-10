@@ -104,7 +104,7 @@ class Engine {
     const fieldsHashMap: FieldsHashMap = {};
     props.schemas.forEach((schema, idx) => {
       const discriminator = schema.title ?? this.numberToLetters(idx);
-      const pathField = `${props.path}[]{${discriminator}}`;
+      const pathField = `${props.path}[]${discriminator}`;
       const r = this.processObject(schema, pathField);
       Object.assign(fieldsHashMap, r.fieldsHashMap);
     });
@@ -168,7 +168,7 @@ class Engine {
           });
           Object.assign(fieldsHashMap, hashMap);
         } else if (value.items.bsonType === BSONType.Object && value.items) {
-          const newPath = `${path}<object>`;
+          const newPath = `${path}[]`;
           Object.assign(fieldsHashMap, this.processObject(value.items, newPath).fieldsHashMap);
         }
       } else {
