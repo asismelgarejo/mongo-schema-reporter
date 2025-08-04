@@ -1,10 +1,10 @@
 import { FieldsReportHashMap, SchemaFields } from "../src/fields";
-import { BSONType, STATIC_WORDS, TObject, TOr } from "../src/shared";
+import { BSONType, STATIC_WORDS, TObject, TOneOf } from "../src/shared";
 
 describe("Schema Fields", () => {
   type Test = {
     name: string;
-    input: TObject | TOr;
+    input: TObject | TOneOf;
     expected: FieldsReportHashMap[];
   };
 

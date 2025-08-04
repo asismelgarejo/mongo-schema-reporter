@@ -1,4 +1,4 @@
-import { BSONType, STATIC_WORDS, TAnyOf, TObject, TOneOf } from "../shared";
+import { BSONType, STATIC_WORDS, TAnyOf, TObject, TOneOf, TSchemaTypes } from "../shared";
 
 //#region types
 export type FieldReport = {
@@ -111,91 +111,99 @@ class Engine {
     return fieldsHashMap;
   };
 
+  private processProperty(value: TSchemaTypes, isRequired: boolean, path: string): FieldsHashMap {
+    const fieldsHashMap: FieldsHashMap = {};
+    if ("oneOf" in value) {
+      const hashMap = this.proccessIsophormicObjects({
+        description: value.description,
+        isRequired,
+        path,
+        schemas: value.oneOf,
+        title: value.title,
+      });
+      Object.assign(fieldsHashMap, hashMap);
+    } else if ("anyOf" in value) {
+      const hashMap = this.proccessIsophormicObjects({
+        description: value.description,
+        isRequired,
+        path,
+        schemas: value.anyOf,
+        title: value.title,
+      });
+      Object.assign(fieldsHashMap, hashMap);
+    } else if (value.bsonType === BSONType.Object && value.properties) {
+      fieldsHashMap[path] = {
+        path,
+        data_type: BSONType.Object,
+        description: value?.description,
+        required: isRequired,
+        title: value.title,
+      };
+      Object.entries(value.properties).forEach(([k, v]) => {
+        const required = value?.required ? value?.required.includes(k) : false;
+        Object.assign(fieldsHashMap, this.processProperty(v, required, `${path}.${k}`));
+      });
+    } else if (value.bsonType === BSONType.Array && value.items) {
+      fieldsHashMap[path] = {
+        path,
+        data_type: `${value.bsonType}<${value.items.bsonType}>`,
+        description: value.description,
+        required: isRequired,
+        title: value.title,
+      };
+
+      if ("oneOf" in value.items) {
+        const hashMap = this.proccessIsophormicArrayProps({
+          path,
+          schemas: value.items.oneOf,
+        });
+        Object.assign(fieldsHashMap, hashMap);
+      } else if ("anyOf" in value.items) {
+        const hashMap = this.proccessIsophormicArrayProps({
+          path,
+          schemas: value.items.anyOf,
+        });
+        Object.assign(fieldsHashMap, hashMap);
+      } else if (value.items.bsonType === BSONType.Object && value.items) {
+        const newPath = `${path}[]`;
+        Object.assign(fieldsHashMap, this.processObject(value.items, newPath).fieldsHashMap);
+      }
+    } else {
+      if (value.bsonType === BSONType.String && value?.enum) {
+        fieldsHashMap[path] = {
+          path,
+          data_type: `enum(${value.enum.map((e: string) => `'${e}'`).join(", ")})`,
+          description: value.description,
+          required: isRequired,
+          title: value.title,
+        };
+      } else {
+        fieldsHashMap[path] = {
+          path,
+          data_type: `${value.bsonType}`,
+          description: value.description,
+          required: isRequired,
+          title: value.title,
+        };
+      }
+    }
+    return fieldsHashMap;
+  }
+
+  // Process an object schema recursively
   private processObject = (schema: TObject, prefix = ""): FieldsReportHashMap => {
     const fieldsHashMap: FieldsHashMap = {};
 
     for (const [key, value] of Object.entries(schema.properties)) {
       const isRequired = schema?.required ? schema?.required.includes(key) : false;
       const path = this.getPath(prefix, key);
-
-      if ("oneOf" in value) {
-        const hashMap = this.proccessIsophormicObjects({
-          description: value.description,
-          isRequired,
-          path,
-          schemas: value.oneOf,
-          title: value.title,
-        });
-        Object.assign(fieldsHashMap, hashMap);
-      } else if ("anyOf" in value) {
-        const hashMap = this.proccessIsophormicObjects({
-          description: value.description,
-          isRequired,
-          path,
-          schemas: value.anyOf,
-          title: value.title,
-        });
-        Object.assign(fieldsHashMap, hashMap);
-      } else if (value.bsonType === BSONType.Object && value.properties) {
-        fieldsHashMap[path] = {
-          path,
-          data_type: BSONType.Object,
-          description: value?.description,
-          required: isRequired,
-          title: value.title,
-        };
-
-        Object.assign(fieldsHashMap, this.processObject(value, prefix));
-      } else if (value.bsonType === BSONType.Array && value.items) {
-        fieldsHashMap[path] = {
-          path,
-          data_type: `${value.bsonType}<${value.items.bsonType}>`,
-          description: value.description,
-          required: isRequired,
-          title: value.title,
-        };
-
-        if ("oneOf" in value.items) {
-          const hashMap = this.proccessIsophormicArrayProps({
-            path,
-            schemas: value.items.oneOf,
-          });
-          Object.assign(fieldsHashMap, hashMap);
-        } else if ("anyOf" in value.items) {
-          const hashMap = this.proccessIsophormicArrayProps({
-            path,
-            schemas: value.items.anyOf,
-          });
-          Object.assign(fieldsHashMap, hashMap);
-        } else if (value.items.bsonType === BSONType.Object && value.items) {
-          const newPath = `${path}[]`;
-          Object.assign(fieldsHashMap, this.processObject(value.items, newPath).fieldsHashMap);
-        }
-      } else {
-        if (value.bsonType === BSONType.String && value?.enum) {
-          fieldsHashMap[path] = {
-            path,
-            data_type: `enum(${value.enum.map((e: string) => `'${e}'`).join(", ")})`,
-            description: value.description,
-            required: isRequired,
-            title: value.title,
-          };
-        } else {
-          fieldsHashMap[path] = {
-            path,
-            data_type: `${value.bsonType}`,
-            description: value.description,
-            required: isRequired,
-            title: value.title,
-          };
-        }
-      }
+      const response = this.processProperty(value, isRequired, path);
+      Object.assign(fieldsHashMap, response);
     }
-    const asdas: FieldsReportHashMap = {
+    return {
       title: schema.title ?? STATIC_WORDS.UnnamedSchema,
       fieldsHashMap,
     };
-    return asdas;
   };
 }
 
