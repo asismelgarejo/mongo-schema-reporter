@@ -14,9 +14,16 @@ export type FieldsReportHashMap = {
   title: string;
   fieldsHashMap: FieldsHashMap;
 };
+export type ReportParentRoot = {
+  title: string;
+  shapes: FieldsReportHashMap[];
+};
 export type FieldsReportArray = {
   title: string;
-  fields: FieldReport[];
+  shapes: {
+    title: string;
+    fields: FieldReport[];
+  }[];
 };
 type ProcessSchemaProps = {
   schema: TObject | TOneOf | TAnyOf;
@@ -48,19 +55,20 @@ class Engine {
     return result;
   };
 
-  getReport = ($schema: TObject | TOneOf): FieldsReportHashMap[] => {
-    const report: FieldsReportHashMap[] = this.processSchema({ schema: $schema });
+  getReport = ($schema: TObject | TOneOf): ReportParentRoot[] => {
+    const report: ReportParentRoot[] = this.processSchema({ schema: $schema });
     return report;
   };
-  private processSchema = ({ schema, prefix = "" }: ProcessSchemaProps): FieldsReportHashMap[] => {
-    const report: FieldsReportHashMap[] = [];
+  private processSchema = ({ schema, prefix = "" }: ProcessSchemaProps): ReportParentRoot[] => {
+    const report: ReportParentRoot[] = [];
+    const title = schema.title ?? STATIC_WORDS.UnnamedCollection;
     if ("oneOf" in schema) {
-      report.push(...this.processOneOf(schema, prefix));
+      report.push({ title, shapes: this.processOneOf(schema, prefix) });
     } else if ("anyOf" in schema) {
-      report.push(...this.processAnyOf(schema, prefix));
+      report.push({ title, shapes: this.processAnyOf(schema, prefix) });
     } else {
       const r = this.processObject(schema, prefix);
-      report.push(r);
+      report.push({ title: r.title, shapes: [r] });
     }
 
     return report;
@@ -208,7 +216,7 @@ class Engine {
 }
 
 export class SchemaFields {
-  reports: FieldsReportHashMap[] = [];
+  reports: ReportParentRoot[] = [];
   private constructor(private readonly engine: Engine) {}
 
   static create() {
@@ -224,7 +232,7 @@ export class SchemaFields {
     const arrays = this.reports.map((r) => {
       const obj: FieldsReportArray = {
         title: r.title,
-        fields: Object.values(r.fieldsHashMap),
+        shapes: r.shapes.map((s) => ({ title: s.title, fields: Object.values(s.fieldsHashMap) })),
       };
 
       return obj;
