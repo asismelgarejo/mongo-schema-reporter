@@ -55,7 +55,7 @@ class Engine {
     return result;
   };
 
-  getReport = ($schema: TObject | TOneOf): ReportParentRoot[] => {
+  getReport = ($schema: TObject | TOneOf | TAnyOf): ReportParentRoot[] => {
     const report: ReportParentRoot[] = this.processSchema({ schema: $schema });
     return report;
   };
@@ -102,7 +102,7 @@ class Engine {
 
     props.schemas.forEach((schema, idx) => {
       const discriminator = schema.title ?? this.numberToLetters(idx);
-      const pathField = `${props.path}{${discriminator}}`;
+      const pathField = `${props.path}{"${discriminator}"}`;
       const r = this.processObject(schema, pathField);
       Object.assign(fieldsHashMap, r.fieldsHashMap);
     });
@@ -112,7 +112,7 @@ class Engine {
     const fieldsHashMap: FieldsHashMap = {};
     props.schemas.forEach((schema, idx) => {
       const discriminator = schema.title ?? this.numberToLetters(idx);
-      const pathField = `${props.path}[${discriminator}]`;
+      const pathField = `${props.path}["${discriminator}"]`;
       const r = this.processObject(schema, pathField);
       Object.assign(fieldsHashMap, r.fieldsHashMap);
     });
@@ -223,7 +223,7 @@ export class SchemaFields {
     return new SchemaFields(new Engine());
   }
 
-  process = ($schema: TObject | TOneOf): SchemaFields => {
+  process = ($schema: TObject | TOneOf | TAnyOf): SchemaFields => {
     this.reports = this.engine.getReport($schema);
     return this;
   };
