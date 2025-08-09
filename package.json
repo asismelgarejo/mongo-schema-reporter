@@ -38,6 +38,8 @@
     "typescript-eslint": "^8.26.0"
   },
   "dependencies": {
-    "jsondiffpatch": "^0.6.0"
+    "@sinclair/typebox": "^0.34.38",
+    "jsondiffpatch": "^0.6.0",
+    "mongodb": "^6.18.0"
   }
 }

@@ -232,7 +232,14 @@ export class SchemaFields {
     const arrays = this.reports.map((r) => {
       const obj: FieldsReportArray = {
         title: r.title,
-        shapes: r.shapes.map((s) => ({ title: s.title, fields: Object.values(s.fieldsHashMap) })),
+        shapes: r.shapes.map((s) => {
+          const fields = Object.values(s.fieldsHashMap);
+          fields.sort((a, b) => {
+            if (a.path === b.path) return 0;
+            return a.path > b.path ? 1 : -1;
+          });
+          return { title: s.title, fields };
+        }),
       };
 
       return obj;
